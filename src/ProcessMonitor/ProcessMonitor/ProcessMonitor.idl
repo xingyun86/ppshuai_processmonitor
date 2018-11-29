@@ -1,0 +1,20 @@
+// ProcessMonitor.idl : IDL source for ProcessMonitor.exe
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (ProcessMonitor.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(7E3A2962-DA08-426F-AFCA-0BF28172FB60),
+	version(1.0),
+	helpstring("ProcessMonitor 1.0 Type Library")
+]
+library ProcessMonitorLib
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+};

@@ -1,0 +1,11 @@
+HKCR
+{
+	NoRemove AppID
+	{
+		{7418EF25-A710-4451-A857-F4E48AC13736} = s 'ProcessMonitor'
+		'ProcessMonitor.EXE'
+		{
+			val AppID = s {7418EF25-A710-4451-A857-F4E48AC13736}
+		}
+	}
+}
