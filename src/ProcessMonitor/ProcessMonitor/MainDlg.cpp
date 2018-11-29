@@ -31,10 +31,7 @@ BOOL GetFileTimeAsString(LPFILETIME pFt, _TCHAR * pszTime, unsigned cbIn)
 	if (!FileTimeToSystemTime(&ftLocal, &st))
 		return FALSE;
 
-	_TCHAR szTemp[12];
-
-	wsprintf(szTemp, _T("%02u:%02u:%02u"), st.wHour, st.wMinute, st.wSecond);
-	lstrcpyn(pszTime, szTemp, cbIn);
+	_sntprintf_s(pszTime, cbIn, cbIn, _T("%02u:%02u:%02u"), st.wHour, st.wMinute, st.wSecond);
 	return TRUE;
 }
 
@@ -49,11 +46,8 @@ BOOL GetFileDateAsString(LPFILETIME pFt, _TCHAR * pszDate, unsigned cbIn)
 
 	if (!FileTimeToSystemTime(&ftLocal, &st))
 		return FALSE;
-
-	_TCHAR szTemp[12];
-
-	wsprintf(szTemp, _T("%04u/%02u/%02u"), st.wYear, st.wMonth, st.wDay);
-	lstrcpyn(pszDate, szTemp, cbIn);
+	
+	_sntprintf_s(pszDate, cbIn, cbIn, _T("%04u/%02u/%02u"), st.wYear, st.wMonth, st.wDay);
 	return TRUE;
 }
 
@@ -74,6 +68,7 @@ void CMainDlg::UpdateProcessTime()
 		{
 			continue;
 		}
+		
 		if (::GetProcessTimes(pstProcessInfo->hProcess, &ftCreate, &ftExit, &ftKernel, &ftUser))
 		{
 			// Horrible, disgusting hack!  The two lines below basically grab the
@@ -99,33 +94,33 @@ void CMainDlg::UpdateProcessTime()
 
 			if (!ftCreate.dwHighDateTime && !ftCreate.dwLowDateTime)
 			{
-				lstrcpy(szFileDate, _T(""));
-				lstrcpy(szFileTime, _T(""));
+				_tcscpy_s(szFileDate, _T(""));
+				_tcscpy_s(szFileTime, _T(""));
 			}
 			else
 			{
-				GetFileDateAsString(&ftCreate, szFileDate, sizeof(szFileDate));
-				GetFileTimeAsString(&ftCreate, szFileTime, sizeof(szFileTime));
+				GetFileDateAsString(&ftCreate, szFileDate, sizeof(szFileDate) / sizeof(*szFileDate));
+				GetFileTimeAsString(&ftCreate, szFileTime, sizeof(szFileTime) / sizeof(*szFileTime));
 			}
 
-			wsprintf(szItem, _T("%s %s"), szFileDate, szFileTime);
+			_stprintf_s(szItem, _T("%s %s"), szFileDate, szFileTime);
 			_TCHAR tzText[MAX_PATH] = { 0 };
 			listViewCtrl.GetItemText(i, 3, tzText, sizeof(tzText) / sizeof(*tzText));
 
 			// if already exists then don't update, this will reduce the flicker
-			if (lstrcmpi(tzText, szItem) != 0)
+			if (_tcsicmp(tzText, szItem) != 0)
 			{
 				listViewCtrl.SetItemText(i, 3, szItem);
 			}
 			if (!ftExit.dwHighDateTime && !ftExit.dwLowDateTime)
 			{
-				lstrcpy(szFileDate, _T(""));
-				lstrcpy(szFileTime, _T(""));
+				_tcscpy_s(szFileDate, _T(""));
+				_tcscpy_s(szFileTime, _T(""));
 			}
 			else
 			{
-				GetFileDateAsString(&ftExit, szFileDate, sizeof(szFileDate));
-				GetFileTimeAsString(&ftExit, szFileTime, sizeof(szFileTime));
+				GetFileDateAsString(&ftExit, szFileDate, sizeof(szFileDate) / sizeof(*szFileDate));
+				GetFileTimeAsString(&ftExit, szFileTime, sizeof(szFileTime) / sizeof(*szFileTime));
 			}
 
 			//wsprintf(szItem, _T("%s %s"), szFileDate, szFileTime);
@@ -142,69 +137,66 @@ void CMainDlg::UpdateProcessTime()
 		}
 	}
 }
-BOOL NtPathToDosPath(LPTSTR pDosPath, LPTSTR pNtPath)
+BOOL NtPathToDosPath(LPTSTR pszDosPath, LPTSTR pszNtPath)
 {
-	TCHAR    DriveStr[MAX_PATH] = { 0 };
-	TCHAR    DevName[MAX_PATH] = { 0 };
-	TCHAR           Drive[3];
-	INT             cchDevName;
-	INT             i = 0;
-	//检查参数  
-	if (IsBadReadPtr(pDosPath, 1) != 0)return FALSE;
-	if (IsBadWritePtr(pNtPath, 1) != 0)return FALSE;
-
-	if (!lstrcmpi(pDosPath, _T("A:\\")) || !lstrcmpi(pDosPath, _T("B:\\")))
+	_TCHAR tzDevName[MAX_PATH] = { 0 };
+	_TCHAR tzDrive[4] = { 0 };
+	//检查参数
+	if (!pszDosPath || !pszNtPath)
+	{
 		return FALSE;
+	}
 
-	Drive[0] = pDosPath[i];
-	Drive[1] = pDosPath[i + 1];
-	Drive[2] = _T('\0');
-	if (!QueryDosDevice(Drive, DevName, MAX_PATH))//查询设备名，这里是重点
-		return FALSE;
-	cchDevName = lstrlen(DevName);
-	lstrcpy(pNtPath, DevName);//复制设备名  
-	lstrcat(pNtPath, pDosPath + 2);//复制路径  
-	return TRUE;
+	if ((*pszNtPath) >= _T('C') && (*pszNtPath) <= _T('Z'))
+	{
+		memset(tzDrive, 0, sizeof(tzDrive));
+		_tcsncpy(tzDrive, pszNtPath, sizeof(WORD));
+		if (!QueryDosDevice(tzDrive, tzDevName, MAX_PATH))//查询设备名，这里是重点
+		{
+			return FALSE;
+		}
+		_stprintf_s(pszDosPath, MAX_PATH, _T("%s%s"), tzDevName, pszNtPath + sizeof(WORD));
+		return TRUE;
+	}
+	_stprintf_s(pszDosPath, MAX_PATH, _T("%s"), pszNtPath);
+	return FALSE;
 }
-BOOL DosPathToNtPath(LPTSTR pszDosPath, LPTSTR pszNtPath)
+BOOL DosPathToNtPath(LPTSTR pszNtPath, LPTSTR pszDosPath)
 {
-	TCHAR			szDriveStr[MAX_PATH];
-	TCHAR			szDevName[MAX_PATH];
-	TCHAR			szDrive[3];
-	INT				cchDevName;
-	INT				i;
+	_TCHAR	tzDriveStrings[MAX_PATH] = { 0 };
+	_TCHAR	tzDevName[MAX_PATH] = { 0 };
+	_TCHAR	tzDrive[4] = { 0 };
 
 	//检查参数
 	if (!pszDosPath || !pszNtPath)
+	{
 		return FALSE;
+	}
 
 	//获取本地磁盘字符串
-	if (GetLogicalDriveStrings(sizeof(szDriveStr), szDriveStr))
+	if (GetLogicalDriveStrings(sizeof(tzDriveStrings)/sizeof(*tzDriveStrings), tzDriveStrings))
 	{
-		for (i = 0; szDriveStr[i]; i += 4)
+		for (auto nIndex = 0; tzDriveStrings[nIndex]; nIndex += sizeof(tzDrive) / sizeof(*tzDrive))
 		{
-			if (!lstrcmpi(&(szDriveStr[i]), _T("A:\\")) || !lstrcmpi(&(szDriveStr[i]), _T("B:\\")))
-				continue;
-
-			szDrive[0] = szDriveStr[i];
-			szDrive[1] = szDriveStr[i + 1];
-			szDrive[2] = _T('\0');
-			if (!QueryDosDevice(szDrive, szDevName, MAX_PATH))//查询 Dos 设备名
-				return FALSE;
-
-			cchDevName = lstrlen(szDevName);
-			if (_tcsnicmp(pszDosPath, szDevName, cchDevName) == 0)//命中
+			if (tzDriveStrings[nIndex] >= _T('C') && tzDriveStrings[nIndex] <= _T('Z'))
 			{
-				lstrcpy(pszNtPath, szDrive);//复制驱动器
-				lstrcat(pszNtPath, pszDosPath + cchDevName);//复制路径
-
-				return TRUE;
-			}
+				memset(tzDrive, 0, sizeof(tzDrive));
+				_tcsncpy(tzDrive, &tzDriveStrings[nIndex], sizeof(WORD));
+				if (!QueryDosDevice(tzDrive, tzDevName, MAX_PATH))//查询 Dos 设备名
+				{
+					return FALSE;
+				}
+				if (!_tcsnicmp(pszDosPath, tzDevName, _tcslen(tzDevName)))//命中
+				{
+					_stprintf_s(pszNtPath, MAX_PATH, _T("%s%s"), tzDrive, pszDosPath + _tcslen(tzDevName));
+					return TRUE;
+				}
+			}			
 		}
 	}
 
-	lstrcpy(pszNtPath, pszDosPath);
-
+	_stprintf_s(pszNtPath, MAX_PATH, _T("%s"), pszDosPath);
+	
 	return FALSE;
 }
 void CMainDlg::AddProcessToList(DWORD processID)
@@ -264,18 +256,15 @@ void CMainDlg::AddProcessToList(DWORD processID)
 
 	if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded))
 	{
-		_TCHAR tzNTPathName[MAX_PATH] = { 0 };
-		GetProcessImageFileName(hProcess, tzNTPathName, sizeof(tzNTPathName));
-		DosPathToNtPath(tzNTPathName, szProcessName);
+		_TCHAR tzDosPathName[MAX_PATH] = { 0 };
+		GetProcessImageFileName(hProcess, tzDosPathName, sizeof(tzDosPathName) / sizeof(*tzDosPathName));
+		DosPathToNtPath(szProcessName, tzDosPathName);
 	}
 	_stprintf_s(szItemString, _T("%u"), processID);
 	_stprintf_s(szBuff, _T("%d"), nCount);
 
 	// fill the structure and store the info for later updates
-	pstProcessInfo = new struct CMainDlg::ST_PROCESSINFO();
-	pstProcessInfo->dwProcessId = processID;
-	pstProcessInfo->hProcess = hProcess;
-	pstProcessInfo->pCpuUsage->SetProcessID(pstProcessInfo->dwProcessId);
+	pstProcessInfo = new struct CMainDlg::ST_PROCESSINFO(processID, hProcess);
 
 	listViewCtrl.InsertItem(nCount, szItemString);
 	listViewCtrl.SetItemText(nCount, 2, szProcessName);
@@ -309,13 +298,16 @@ void CMainDlg::ClearProcessList()
 	CListViewCtrl listViewCtrl = (CListViewCtrl)GetDlgItem(IDC_LIST1);
 
 	int nCount = listViewCtrl.GetItemCount();
-	struct CMainDlg::ST_PROCESSINFO *pstProcessInfo;
+	struct CMainDlg::ST_PROCESSINFO *pstProcessInfo = NULL;
 
 	for (int i = nCount - 1; i >= 0; i--)
 	{
 		pstProcessInfo = (struct CMainDlg::ST_PROCESSINFO *)listViewCtrl.GetItemData(i);
-		delete pstProcessInfo;
-
+		if (pstProcessInfo)
+		{
+			delete pstProcessInfo;
+		}
+		
 		listViewCtrl.DeleteItem(i);
 	}
 }
@@ -450,7 +442,7 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		listViewCtrl1.InsertColumn(1, _T("#"), LVCFMT_RIGHT, 30, 1);
 		listViewCtrl1.InsertColumn(2, _T("Name"), LVCFMT_LEFT, 450, 2);
 		listViewCtrl1.InsertColumn(3, _T("Start"), LVCFMT_RIGHT, 120, 3);
-		listViewCtrl1.InsertColumn(4, _T("End"), LVCFMT_RIGHT, 120, 4);
+		listViewCtrl1.InsertColumn(4, _T("Cpu"), LVCFMT_RIGHT, 120, 4);
 
 		// kernel mode process ListCtrl initialization
 		listViewCtrl2.InsertColumn(1, _T("Desc"), LVCFMT_LEFT, 160, 1);

@@ -57,6 +57,12 @@ private:
 			hProcess = NULL;
 			pCpuUsage = new CPUUsage();
 		}
+		ST_PROCESSINFO(DWORD _dwProcessId, HANDLE _hProcess)
+		{
+			dwProcessId = _dwProcessId;
+			hProcess = _hProcess;
+			pCpuUsage = new CPUUsage(_dwProcessId);
+		}
 
 		~ST_PROCESSINFO()
 		{

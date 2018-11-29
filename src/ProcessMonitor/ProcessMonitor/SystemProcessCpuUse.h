@@ -79,12 +79,12 @@ public:
 				}
 				else
 				{
-					_tprintf(_T("GetProcessTimes failed! LastError = %ld\r\n"), GetLastError());
+					_tprintf_s(_T("GetProcessTimes failed! LastError = %ld\r\n"), GetLastError());
 				}
 			}
 			else
 			{
-				_tprintf(_T("GetExitCodeProcess failed! LastError = %ld,ExitCode = %ld\r\n"), dwExitCode, GetLastError());
+				_tprintf_s(_T("GetExitCodeProcess failed! LastError = %ld,ExitCode = %ld\r\n"), dwExitCode, GetLastError());
 			}
 		}
 		
